@@ -24,30 +24,34 @@ NetworkDevice::~NetworkDevice()
 
 void NetworkDevice::run(void)
 {
-    network_packet *send_packet = new network_packet;
+    network_packet *send_packet = NULL;
     network_packet *recv_packet;
-
-    init_network_packet(send_packet);
 
     while (true) {
         while (!out_flits.empty()) {
-            network_packet_add(send_packet, out_flits.front().data);
-            if (out_flits.front().last) {
-                out_packets.push(send_packet);
+            if (send_packet == NULL) {
+                int len = out_flits.front() & 0xffff;
                 send_packet = new network_packet;
-                init_network_packet(send_packet);
+                network_packet_init(send_packet, len);
             }
+
+            network_packet_add(send_packet, out_flits.front());
             out_flits.pop();
+
+            if (network_packet_complete(send_packet)) {
+                out_packets.push(send_packet);
+                send_packet = NULL;
+            }
         }
 
         while (!in_packets.empty()) {
             recv_packet = in_packets.front();
-            for (int i = 0; i < recv_packet->len; i++) {
-                network_flit flt;
-                flt.data = recv_packet->data[i];
-                flt.last = (i + 1) == recv_packet->len;
-                in_flits.push(flt);
-            }
+            recv_packet->data[0] &= ~0xffffL;
+            recv_packet->data[0] |= (recv_packet->len & 0xffff);
+
+            for (int i = 0; i < recv_packet->len; i++)
+                in_flits.push(recv_packet->data[i]);
+
             in_packets.pop();
             delete recv_packet;
         }
@@ -59,18 +63,12 @@ void NetworkDevice::run(void)
 
 void NetworkDevice::tick(
             bool out_valid,
-            uint64_t out_data,
-            bool out_last,
+            uint64_t out_bits,
             bool in_ready)
 {
-    if (out_valid && out_ready()) {
-        struct network_flit flt;
-        flt.data = out_data;
-        flt.last = out_last;
-        out_flits.push(flt);
-    }
+    if (out_valid && out_ready())
+        out_flits.push(out_bits);
 
-    if (in_valid() && in_ready) {
+    if (in_valid() && in_ready)
         in_flits.pop();
-    }
 }

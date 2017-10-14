@@ -8,7 +8,7 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.regmapper.{HasRegMap, RegField}
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util.TwoWayCounter
-import testchipip.{StreamIO, StreamChannel, SeqQueue, TLHelper}
+import testchipip.{SerialIO, StreamChannel, TLHelper}
 import scala.util.Random
 import IceNetConsts._
 
@@ -258,7 +258,7 @@ class IceNicRecvPathModule(outer: IceNicRecvPath)
   writer.io.recv <> io.recv
 }
 
-class NICIO extends StreamIO(NET_IF_WIDTH) {
+class NICIO extends SerialIO(NET_IF_WIDTH) {
   val macAddr = Input(UInt(ETH_MAC_BITS.W))
 
   override def cloneType = (new NICIO).asInstanceOf[this.type]
@@ -304,8 +304,8 @@ class IceNIC(address: BigInt, beatBytes: Int = 8, nXacts: Int = 8)
     recvPath.module.io.recv <> control.module.io.recv
 
     // connect externally
-    recvPath.module.io.in <> io.ext.in
-    io.ext.out <> sendPath.module.io.out
+    recvPath.module.io.in <> LengthDecoder(io.ext.in)
+    io.ext.out <> LengthEncoder(sendPath.module.io.out)
     control.module.io.macAddr := io.ext.macAddr
   }
 }

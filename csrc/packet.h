@@ -12,26 +12,23 @@
 #define MAC_ADDR_BYTES 6
 #define BCAST_MAC 0xffffffffffffL
 
-struct network_flit {
-    uint64_t data;
-    bool last;
-};
-
 struct network_packet {
 	uint64_t data[ETH_MAX_WORDS];
 	int len;
+	int idx;
 };
 
-static inline void init_network_packet(struct network_packet *packet)
+static inline void network_packet_init(struct network_packet *packet, int len)
 {
-    packet->len = 0;
+    packet->len = len;
+    packet->idx = 0;
     memset(packet->data, 0, ETH_MAX_WORDS * sizeof(uint64_t));
 }
 
 static inline void network_packet_add(network_packet *packet, uint64_t data)
 {
-    packet->data[packet->len] = data;
-    packet->len++;
+    packet->data[packet->idx] = data;
+    packet->idx++;
 }
 
 static inline uint64_t network_packet_dstmac(network_packet *packet)
@@ -48,6 +45,11 @@ static inline network_packet *network_packet_copy(network_packet *packet)
     packet_copy->len = packet->len;
     memcpy(packet_copy->data, packet->data, packet->len * sizeof(uint64_t));
     return packet_copy;
+}
+
+static inline bool network_packet_complete(network_packet *packet)
+{
+	return packet->idx == packet->len;
 }
 
 static inline uint64_t random_macaddr(void)
