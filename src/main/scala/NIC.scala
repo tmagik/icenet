@@ -410,6 +410,21 @@ class NICIOvonly extends Bundle {
   override def cloneType = (new NICIOvonly).asInstanceOf[this.type]
 }
 
+object NICIOvonly {
+  def apply(nicio: NICIO): NICIOvonly = {
+    val vonly = Wire(new NICIOvonly)
+    vonly.out.valid := nicio.out.valid
+    vonly.out.bits  := nicio.out.bits
+    nicio.out.ready := true.B
+    nicio.in.valid  := vonly.in.valid
+    nicio.in.bits   := vonly.in.bits
+    assert(!vonly.in.valid || nicio.in.ready, "NIC input not ready for valid")
+    nicio.macAddr := vonly.macAddr
+    nicio.rlimit  := vonly.rlimit
+    vonly
+  }
+}
+
 /* 
  * A simple NIC
  *
@@ -445,7 +460,7 @@ class IceNIC(address: BigInt, beatBytes: Int = 8)
     val config = p(NICKey)
 
     val io = IO(new Bundle {
-      val ext = new NICIOvonly
+      val ext = new NICIO
       val tap = config.tapFunc.map(_ => Decoupled(new StreamChannel(NET_IF_WIDTH)))
     })
 
@@ -453,13 +468,8 @@ class IceNIC(address: BigInt, beatBytes: Int = 8)
     recvPath.module.io.recv <> control.module.io.recv
 
     // connect externally
-    recvPath.module.io.in.bits :=  io.ext.in.bits
-    recvPath.module.io.in.valid :=  io.ext.in.valid
-    //ignore recvPath.module.io.in.ready
-
-    io.ext.out.bits := sendPath.module.io.out.bits
-    io.ext.out.valid := sendPath.module.io.out.valid
-    sendPath.module.io.out.ready := Bool(true)
+    recvPath.module.io.in <> io.ext.in
+    io.ext.out <> sendPath.module.io.out
 
     control.module.io.macAddr := io.ext.macAddr
     sendPath.module.io.rlimit := io.ext.rlimit
@@ -491,7 +501,7 @@ trait HasPeripheryIceNICModuleImp extends LazyModuleImp {
   val outer: HasPeripheryIceNIC
   val net = IO(new NICIOvonly)
 
-  net <> outer.icenic.module.io.ext
+  net <> NICIOvonly(outer.icenic.module.io.ext)
 
   def connectNicLoopback(dummy: Int = 0) {
     net.in <> net.out
