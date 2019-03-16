@@ -12,8 +12,8 @@ import testchipip.{StreamIO, StreamChannel, TLHelper}
 import IceNetConsts._
 
 case class NICConfig(
-  inBufFlits: Int  = 2 * ETH_MAX_BYTES / NET_IF_BYTES,
-  outBufFlits: Int = 2 * ETH_MAX_BYTES / NET_IF_BYTES,
+  inBufFlits: Int  = 2 * ETH_STANDARD_MTU / NET_IF_BYTES,
+  outBufFlits: Int = 2 * ETH_STANDARD_MTU / NET_IF_BYTES,
   nMemXacts: Int = 8,
   maxAcquireBytes: Int = 64,
   ctrlQueueDepth: Int = 10,
@@ -344,8 +344,8 @@ trait HasPeripheryIceNICModuleImp extends LazyModuleImp {
 
   import PauseConsts.BT_PER_QUANTA
 
-  private val packetWords = ETH_MAX_BYTES / NET_IF_BYTES
-  private val packetQuanta = (ETH_MAX_BYTES * 8) / BT_PER_QUANTA
+  private val packetWords = ETH_STANDARD_MTU / NET_IF_BYTES
+  private val packetQuanta = (ETH_STANDARD_MTU * 8) / BT_PER_QUANTA
 
   def connectNicLoopback(qDepth: Int = 4 * packetWords, latency: Int = 10) {
 
