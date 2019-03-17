@@ -39,14 +39,14 @@ class BufferBRAM[T <: Data](n: Int, typ: T) extends Module {
 
 class NetworkPacketBuffer[T <: Data](
     bufWords: Int,
-    maxBytes: Int = ETH_JUMBO_MTU,
+    maxBytes: Int = ETH_JUMBO_MAX_BYTES,
     headerBytes: Int = ETH_HEAD_BYTES,
     headerType: T = new EthernetHeader,
     wordBytes: Int = NET_IF_WIDTH / 8,
     dropChecks: Seq[(T, StreamChannel, Bool) => Bool] = Nil,
     dropless: Boolean = false) extends Module {
 
-  val maxWords = maxBytes / wordBytes
+  val maxWords = (maxBytes - 1) / wordBytes + 1
   val headerWords = headerBytes / wordBytes
   val wordBits = wordBytes * 8
   val nPackets = (bufWords - 1) / (headerWords + 1) + 1
